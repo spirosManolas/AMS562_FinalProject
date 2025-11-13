@@ -11,6 +11,8 @@
 #include "Person.hpp"
 #include <string>
 #include <random>
+#include <SFML/Graphics.hpp>
+
 
 /**
  * @class Population
@@ -23,7 +25,19 @@ private:
     float _ri = 0.20; /** < This represents the infection rate */
     float _rr = 1.0/20.0; /* < This represents the recovery rate*/
     float _rm = 1.0/200.0; /* <This represents the mutaiton rate*/
-
+/**
+ * @brief Map a state string to a display color.
+ * @param s State string: "susceptible", "infected", "recovered", or "vaccinated".
+ * @return A  @c sf::Color for the given state; light gray if unknown.
+ */
+    sf::Color colorForState(const std::string& s) const {
+    // match the example’s pastel palette
+    if (s == "infected")   return sf::Color(255, 182, 193); //  pink
+    if (s == "recovered")  return sf::Color(173, 216, 230); //  blue
+    if (s == "susceptible") return sf::Color(255, 239, 186); //  yellow
+    if (s == "vaccinated") return sf::Color(152, 251, 152); // green
+    return sf::Color(240, 240, 240);                        //  gray 
+}
 public:
     /**
      * @brief Parameterized constructor initializes a matrix m of size n*n which holds elements of type T. All elements are initially set to susceptible people
@@ -90,8 +104,61 @@ public:
                 }
             }
         }
+
+   
+
     }
+    /**
+    * @brief Aggregate counts of each epidemiological state in the grid.
+    */
+    struct Counts {
+    int susceptible = 0;
+    int infected = 0;
+    int recovered = 0;
+    int vaccinated = 0;
+    };
 
-};
+    Counts countStates() const {
+        Counts c;
+        for (int i = 0; i < _n; ++i) {
+            for (int j = 0; j < _n; ++j) {
+                const auto& s = _m[i][j].getState();
+                if      (s == "susceptible") ++c.susceptible;
+                else if (s == "infected")    ++c.infected;
+                else if (s == "recovered")   ++c.recovered;
+                else if (s == "vaccinated")  ++c.vaccinated;
+        }
+    }
+    return c;
+}
+/**
+ * @brief Render the grid to an SFML window using state-dependent colors.
+ * @param window Target @c sf::RenderWindow to draw into.
+ * @param cellSize Side length of each square cell in pixels.
+ * @param gap Spacing between adjacent cells in pixels.
+ *
+ * The background is cleared to a dark gray and each cell is drawn as a filled rectangle.
+ */
+    void draw(sf::RenderWindow& window, float cellSize = 25.f, float gap = 1.f) const {
+        const unsigned bgR = 40, bgG = 40, bgB = 40; 
+        window.clear(sf::Color(bgR, bgG, bgB));
 
-#endif //POPULATION_HPP
+        sf::RectangleShape cell({cellSize, cellSize});
+        const int n = _n;
+
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                float x = gap + j * (cellSize + gap);
+                float y = gap + i * (cellSize + gap);
+                cell.setPosition({x, y});
+                cell.setFillColor(colorForState(_m[i][j].getState()));
+                window.draw(cell);
+        }
+    }
+}
+    
+
+};    
+
+
+#endif // POPULATION_HPP
