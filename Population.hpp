@@ -24,7 +24,10 @@ private:
     int _n; /** <This represents that the matrix is n*n */
     float _ri = 0.20; /** < This represents the infection rate */
     float _rr = 1.0/20.0; /* < This represents the recovery rate*/
-    float _rm = 1.0/200.0; /* <This represents the mutaiton rate*/
+    float _rm = 1.0/200.0; /* <This represents the mutation rate*/
+    float _rv = 1.0/1000.0; /* < This represents the vaccination rate*/
+    int _t = 0; /* <This represents the number of days elapsed*/
+    int _tv = 200; /* <This represents the number of days until the vaccine is available*/
 /**
  * @brief Map a state string to a display color.
  * @param s State string: "susceptible", "infected", "recovered", or "vaccinated".
@@ -63,6 +66,7 @@ public:
      * @brief Updates the state of the population according to our Markov Chain model
      */
     void Update(){
+        _t = _t + 1; //Updating the day counter
         std::vector<std::vector<Person>> mOld = _m; //copying old state
 
         std::random_device rd;  // Seed for random number 
@@ -72,6 +76,7 @@ public:
 
         for (int i = 0; i < _n; i++){
             for (int j = 0; j < _n; j++){
+                seed = dis(gen) //the seed to determine which event happens for this person
                 if (mOld[i][j].getState() == "susceptible"){ //update for susceptible Persons
                     //finding number of infected neighbors
                     int sum = 0;
@@ -87,19 +92,26 @@ public:
                     if (j+1 < _n && mOld[i][j+1].getState() == "infected"){
                         sum += 1;
                     }
-                    float chance = sum*_ri; //chance of infection = number of infected neighbors * infection rate
-                    if (dis(gen) < chance){
+                    float chance_inf = sum*_ri; //chance of infection = number of infected neighbors * infection rate
+                    if (seed < chance_inf){
                         _m[i][j].set_inf();
+                    } else if (_t >= _tv){
+                        if (chance_inf < seed && seed < chance_inf + _rv){
+                            _m[i][j].set_vac();
+                        }
                     }
                 }
                 if (mOld[i][j].getState() == "infected") { //update for infected Persons
-                    if (dis(gen) < _rr){ //with a recovery rate % chance, set the Person to recovered
+                    if (seed < _rr){ //with a recovery rate % chance, set the Person to recovered
                         _m[i][j].set_rec();
                     }
                 }
                 if (mOld[i][j].getState() == "recovered") { //update for recovered Persons
-                    if (dis(gen) < _rm){ //with a mutation rate % chance, set the Person to susceptible
+                    if (seed < _rm){ //with a mutation rate % chance, set the Person to susceptible
                         _m[i][j].set_sus();
+                    } else if (_t > _tv){
+                        if (_rm < seed && seed < _rm + _rv){
+                            [i][j].set_vac();
                     }
                 }
             }
