@@ -95,8 +95,8 @@ public:
                     float chance_inf = sum*_ri; //chance of infection = number of infected neighbors * infection rate
                     if (seed < chance_inf){
                         _m[i][j].set_inf();
-                    } else if (_t >= _tv){
-                        if (chance_inf < seed && seed < chance_inf + _rv){
+                    } else if (_t >= _tv){ //If the vaccine has been discovered
+                        if (chance_inf < seed && seed < chance_inf + _rv){ //With a vaccine rate % chance, set the Person to vaccinated
                             _m[i][j].set_vac();
                         }
                     }
@@ -109,8 +109,8 @@ public:
                 if (mOld[i][j].getState() == "recovered") { //update for recovered Persons
                     if (seed < _rm){ //with a mutation rate % chance, set the Person to susceptible
                         _m[i][j].set_sus();
-                    } else if (_t > _tv){
-                        if (_rm < seed && seed < _rm + _rv){
+                    } else if (_t > _tv){ //if the vaccine has been discovered
+                        if (_rm < seed && seed < _rm + _rv){ //with a vaccine rate % chance, set the Person to vaccinated
                             [i][j].set_vac();
                     }
                 }
