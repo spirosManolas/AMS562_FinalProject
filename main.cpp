@@ -2,12 +2,12 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <fstream>      
+#include <fstream>
 #include <optional>
-
+#include <filesystem>   
+#include <random>
 #include "Population.hpp"
 
-// Draw legend + counts + step info on the right side
 void drawLegend(sf::RenderWindow& window,
                 const sf::Font& font,
                 const Population& pop,
@@ -17,7 +17,6 @@ void drawLegend(sf::RenderWindow& window,
     const float panelX = gridPixelSize + 20.f;
     float y = 20.f;
 
-    // Title
     if (!font.getInfo().family.empty()) {
         sf::Text title(font);
         title.setString("Legend");
@@ -28,7 +27,6 @@ void drawLegend(sf::RenderWindow& window,
     }
     y += 40.f;
 
-    // Local helper for colors (mirror of Population::colorForState)
     auto stateColor = [](const std::string& s) {
         if (s == "infected")    return sf::Color(255, 182, 193);
         if (s == "recovered")   return sf::Color(173, 216, 230);
@@ -68,7 +66,6 @@ void drawLegend(sf::RenderWindow& window,
         y += 35.f;
     }
 
-    // Step number
     if (!font.getInfo().family.empty()) {
         y += 15.f;
         std::ostringstream oss;
@@ -85,21 +82,43 @@ void drawLegend(sf::RenderWindow& window,
 
 int main()
 {
-    // ==== Simulation parameters ====
-    const int   gridSize      = 30;
-    const float cellSize      = 20.f;
-    const float gap           = 1.f;
-    const float stepSeconds   = 0.25f;
+    namespace fs = std::filesystem;
+
+    const int   gridSize      = 100;
+    const float cellSize      = 20;
+    const float gap           = 1;
+    const float stepSeconds   = 0.25;
     const int   maxSteps      = 1000;
 
-    Population pop(gridSize);
+    const std::string framesDir = "frames";
+    std::error_code fsErr;
+    if (!fs::exists(framesDir, fsErr)) {
+        if (!fs::create_directory(framesDir, fsErr)) {
+            std::cerr << "Error: could not create directory '" << framesDir
+                      << "': " << fsErr.message() << "\n";
+            return 1;
+        }
+    }
 
-    // Seed a few initial infections
-    pop.set_inf(15, 15);
-    pop.set_inf(15 , 16);
-    pop.set_inf(16, 15);
 
-    // === NEW: open CSV and write header ===
+Population pop(gridSize);
+
+std::mt19937 rng(std::random_device{}());
+std::uniform_real_distribution<float> dist(0.0, 1.0);
+
+float infectionProbability = 0.75;
+
+int start = 25;
+int end   = 75;  
+
+for (int i = start; i < end; ++i) {
+    for (int j = start; j < end; ++j) {
+        if (dist(rng) < infectionProbability) {
+            pop.set_inf(i, j);
+        }
+    }
+}
+
     std::ofstream csv("state_counts.csv");
     if (!csv) {
         std::cerr << "Error: could not open state_counts.csv for writing.\n";
@@ -107,7 +126,6 @@ int main()
     }
     csv << "step,susceptible,infected,recovered,vaccinated\n";
 
-    // log initial state (step 0)
     {
         Population::Counts c0 = pop.countStates();
         csv << 0 << ','
@@ -116,9 +134,7 @@ int main()
             << c0.recovered   << ','
             << c0.vaccinated  << '\n';
     }
-    // === end NEW CSV init ===
 
-    // Pixel size of the grid area
     float gridPixelSize = gap + gridSize * (cellSize + gap);
 
     const unsigned legendWidth = 260;
@@ -132,7 +148,6 @@ int main()
     );
     window.setFramerateLimit(60);
 
-    // Load a font
     sf::Font font;
     if (!font.openFromFile("arial.ttf")) {
         std::cerr << "Warning: could not open font 'arial.ttf'. "
@@ -141,10 +156,9 @@ int main()
 
     sf::Clock stepClock;
     int  step = 0;
-    bool shouldSaveFrame = true; // save initial state
+    bool shouldSaveFrame = true; 
 
     while (window.isOpen()) {
-        // --- Event loop (SFML 3 style) ---
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
                 window.close();
@@ -155,7 +169,7 @@ int main()
             }
         }
 
-        // Advance simulation at fixed time step
+        
         if (step < maxSteps &&
             stepClock.getElapsedTime().asSeconds() >= stepSeconds) {
             pop.Update();
@@ -163,30 +177,29 @@ int main()
             stepClock.restart();
             shouldSaveFrame = true;
 
-            // === NEW: log counts after each update ===
             Population::Counts c = pop.countStates();
             csv << step << ','
                 << c.susceptible << ','
                 << c.infected    << ','
                 << c.recovered   << ','
                 << c.vaccinated  << '\n';
-            // (csv will flush on close; you can also do csv.flush() occasionally)
-            // === end NEW ===
         }
 
-        // Draw current state
-        pop.draw(window, cellSize, gap); // clears + draws grid
+        
+        pop.draw(window, cellSize, gap); 
         drawLegend(window, font, pop, gridPixelSize, step);
         window.display();
 
-        // Save timelapse frame after each step (including step 0)
         if (shouldSaveFrame) {
             sf::Texture texture({window.getSize()});
             texture.update(window);
             sf::Image screenshot = texture.copyToImage();
 
             std::ostringstream name;
-            name << "frame_" << std::setw(4) << std::setfill('0') << step << ".png";
+            name << framesDir << "/frame_"
+                 << std::setw(4) << std::setfill('0') << step
+                 << ".png";
+
             if (!screenshot.saveToFile(name.str())) {
                 std::cerr << "Failed to save frame: " << name.str() << "\n";
             } else {
@@ -197,6 +210,5 @@ int main()
         }
     }
 
-    // csv closes automatically here (RAII), flushing data to disk
     return 0;
 }
