@@ -69,7 +69,10 @@ public:
     void set_rec(int i, int j) { _m[i][j].set_rec(); }
     void set_vac(int i, int j) { _m[i][j].set_vac(); }
 
-    
+    /**
+     * @brief Counts the number of Persons with each state
+     * @return Counts 
+     */
     Counts countStates() const {
         Counts c;
         for (int i = 0; i < _n; ++i) {
