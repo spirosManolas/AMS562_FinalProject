@@ -8,6 +8,14 @@
 #include <random>
 #include "Population.hpp"
 
+/**
+ * @brief Draws the legend for the visualization
+ * @param window RenderWindow to draw into
+ * @param font The font of text
+ * @param pop The object ofht population class being rendered
+ * @param gridPixelSize the size length of each grid squar in pixels
+ * @param step
+ */
 void drawLegend(sf::RenderWindow& window,
                 const sf::Font& font,
                 const Population& pop,
@@ -80,6 +88,11 @@ void drawLegend(sf::RenderWindow& window,
     }
 }
 
+/**
+ * @brief Initializes, updates, and visualizes a member of the Population class according to our disease spread model
+ * 
+ * @return int 
+ */
 int main()
 {
     namespace fs = std::filesystem;
