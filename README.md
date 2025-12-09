@@ -1,6 +1,6 @@
 # AMS562_FinalProject
 
-To compile from terminal while in prject directory use following commands:
+To compile from terminal: while in project directory use following commands:
 
 
 cmake -S . -B build
